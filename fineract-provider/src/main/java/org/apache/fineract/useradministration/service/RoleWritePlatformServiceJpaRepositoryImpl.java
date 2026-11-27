@@ -140,7 +140,6 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
             final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
             validateMayManage(currentUser, role);
 
-            String previousRoleName = role.getName();
             final Map<String, Object> changes = applyChanges(role, command);
             if (!changes.isEmpty()) {
                 this.roleRepository.saveAndFlush(role);
