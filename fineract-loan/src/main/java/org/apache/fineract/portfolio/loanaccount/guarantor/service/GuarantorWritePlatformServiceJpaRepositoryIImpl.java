@@ -199,11 +199,23 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImpl implements Guaranto
 
     private void validateSavingsAccountBelongsToGuarantor(final GuarantorCommand guarantorCommand, final SavingsAccount savingsAccount) {
         if (GuarantorType.CUSTOMER.getValue().equals(guarantorCommand.getGuarantorTypeId())
-                && !Objects.equals(savingsAccount.clientId(), guarantorCommand.getEntityId())) {
+                && !isGuarantorAccount(guarantorCommand.getEntityId(), savingsAccount)) {
             throw new GeneralPlatformDomainRuleException("error.msg.loan.guarantor.savings.account.not.owned.by.guarantor",
                     "Savings account with identifier " + savingsAccount.getId() + " does not belong to the guarantor client",
                     savingsAccount.getId(), guarantorCommand.getEntityId());
         }
+    }
+
+    /**
+     * A client guarantor can pledge their own savings account or the savings account of a group they are a member of.
+     */
+    private boolean isGuarantorAccount(final Long guarantorClientId, final SavingsAccount savingsAccount) {
+        if (Objects.equals(savingsAccount.clientId(), guarantorClientId)) {
+            return true;
+        }
+        final Long groupId = savingsAccount.groupId();
+        return groupId != null && guarantorClientId != null
+                && this.clientRepositoryWrapper.findOneWithNotFoundDetection(guarantorClientId, true).isChildOfGroup(groupId);
     }
 
     private void validateGuarantorSavingsAccountActivationDateWithLoanSubmittedOnDate(final Loan loan,

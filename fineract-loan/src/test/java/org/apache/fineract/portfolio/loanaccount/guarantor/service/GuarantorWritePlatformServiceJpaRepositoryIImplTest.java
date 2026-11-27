@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -33,6 +34,7 @@ import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
 import org.apache.fineract.organisation.staff.domain.StaffRepositoryWrapper;
 import org.apache.fineract.portfolio.account.domain.AccountAssociationsRepository;
+import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.group.domain.GroupRepositoryWrapper;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
@@ -57,6 +59,7 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImplTest {
     private static final Long SAVINGS_ID = 30L;
     private static final Long GUARANTOR_CLIENT_ID = 5L;
     private static final Long OTHER_CLIENT_ID = 99L;
+    private static final Long GROUP_ID = 12L;
 
     @Mock
     private LoanRepositoryWrapper loanRepositoryWrapper;
@@ -70,15 +73,17 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImplTest {
     private AccountAssociationsRepository accountAssociationsRepository;
     @Mock
     private JsonCommand command;
+    @Mock
+    private ClientRepositoryWrapper clientRepositoryWrapper;
 
     private GuarantorWritePlatformServiceJpaRepositoryIImpl underTest;
     private SavingsAccount savingsAccount;
 
     @BeforeEach
     void setUp() {
-        underTest = new GuarantorWritePlatformServiceJpaRepositoryIImpl(loanRepositoryWrapper, guarantorRepository,
-                mock(ClientRepositoryWrapper.class), mock(StaffRepositoryWrapper.class), mock(GroupRepositoryWrapper.class),
-                fromApiJsonDeserializer, mock(CodeValueRepositoryWrapper.class), savingsAccountAssembler, accountAssociationsRepository,
+        underTest = new GuarantorWritePlatformServiceJpaRepositoryIImpl(loanRepositoryWrapper, guarantorRepository, clientRepositoryWrapper,
+                mock(StaffRepositoryWrapper.class), mock(GroupRepositoryWrapper.class), fromApiJsonDeserializer,
+                mock(CodeValueRepositoryWrapper.class), savingsAccountAssembler, accountAssociationsRepository,
                 mock(GuarantorDomainService.class));
         Loan loan = mock(Loan.class);
         when(loan.getStatus()).thenReturn(LoanStatus.SUBMITTED_AND_PENDING_APPROVAL);
@@ -86,6 +91,7 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImplTest {
         savingsAccount = mock(SavingsAccount.class);
         when(savingsAccountAssembler.assembleFrom(anyLong(), anyBoolean())).thenReturn(savingsAccount);
         when(savingsAccount.clientId()).thenReturn(OTHER_CLIENT_ID);
+        lenient().when(savingsAccount.groupId()).thenReturn(null);
     }
 
     private void givenGuarantorCommand(final GuarantorType type, final Long entityId) {
@@ -108,6 +114,20 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImplTest {
     void rejectsSavingsAccountOfAnotherClientForSelfGuarantee() {
         // the borrower guarantees the loan with an account that is not theirs
         givenGuarantorCommand(GuarantorType.CUSTOMER, 7L);
+
+        assertThrows(GeneralPlatformDomainRuleException.class, () -> underTest.createGuarantor(LOAN_ID, command));
+
+        verify(accountAssociationsRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsGroupSavingsAccountOfAGroupTheGuarantorDoesNotBelongTo() {
+        givenGuarantorCommand(GuarantorType.CUSTOMER, GUARANTOR_CLIENT_ID);
+        when(savingsAccount.clientId()).thenReturn(null);
+        when(savingsAccount.groupId()).thenReturn(GROUP_ID);
+        final Client guarantor = mock(Client.class);
+        when(guarantor.isChildOfGroup(GROUP_ID)).thenReturn(false);
+        when(clientRepositoryWrapper.findOneWithNotFoundDetection(GUARANTOR_CLIENT_ID, true)).thenReturn(guarantor);
 
         assertThrows(GeneralPlatformDomainRuleException.class, () -> underTest.createGuarantor(LOAN_ID, command));
 
