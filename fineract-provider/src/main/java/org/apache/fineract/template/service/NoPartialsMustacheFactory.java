@@ -26,7 +26,7 @@ import java.io.Reader;
  * Mustache factory for template text supplied through the API: partials ({@code {{>name}}}) are not supported, so a
  * template cannot pull in files or classpath resources.
  */
-class NoPartialsMustacheFactory extends DefaultMustacheFactory {
+public class NoPartialsMustacheFactory extends DefaultMustacheFactory {
 
     @Override
     public Reader getReader(final String resourceName) {
