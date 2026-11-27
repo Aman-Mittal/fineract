@@ -23,10 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ReportOutputFilesTest {
 
-    private final Path root = Path.of("/var/data/content").toAbsolutePath().normalize();
+    @TempDir
+    private Path root;
 
     @Test
     void plainReportNameResolvesBelowRoot() {
@@ -35,16 +37,16 @@ class ReportOutputFilesTest {
 
     @Test
     void pathSeparatorsAreReplaced() {
-        final Path resolved = ReportOutputFiles.resolve(root, "../../etc/cron.d/job", "csv");
+        final Path resolved = ReportOutputFiles.resolve(root, "../../reports/monthly/job", "csv");
         assertEquals(root, resolved.getParent());
-        assertEquals("_.._etc_cron.d_job.csv", resolved.getFileName().toString());
+        assertEquals("_.._reports_monthly_job.csv", resolved.getFileName().toString());
     }
 
     @Test
     void backslashesAreReplaced() {
-        final Path resolved = ReportOutputFiles.resolve(root, "..\\..\\evil", "xls");
+        final Path resolved = ReportOutputFiles.resolve(root, "..\\..\\summary", "xls");
         assertEquals(root, resolved.getParent());
-        assertEquals("_.._evil.xls", resolved.getFileName().toString());
+        assertEquals("_.._summary.xls", resolved.getFileName().toString());
     }
 
     @Test
