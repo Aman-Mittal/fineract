@@ -164,8 +164,8 @@ class CodingConventionsTest {
     private static final Pattern TRUST_ALL_PROPERTY = Pattern.compile("trusted\\.packages\\s*[:=]\\s*\"?\\*");
 
     // TODO: restrict these to explicit package lists, then remove the entries
-    private static final Set<String> TRUST_ALL_JMS_EXCEPTIONS = Set.of( //
-            "infrastructure/springbatch/messagehandler/jms/JmsBrokerConfiguration.java", //
+    private static final Set<String> TRUST_ALL_JMS_EXCEPTIONS = Set.of(
+            "infrastructure/springbatch/messagehandler/jms/JmsBrokerConfiguration.java",
             "infrastructure/event/external/config/ExternalEventJMSConfiguration.java");
 
     /**
@@ -200,10 +200,8 @@ class CodingConventionsTest {
             .compile("^(\"|'|(this\\.)?(\\w+\\.)?getOrderBy\\(\\)|(this\\.)?(\\w+\\.)?orderBySql\\(\\))");
 
     // These append a local variable that is taken from SearchParameters.getOrderBy() or validated right before use.
-    private static final Set<String> ORDER_BY_VARIABLE_EXCEPTIONS = Set.of( //
-            "organisation/office/service/OfficeReadPlatformServiceImpl.java", //
-            "portfolio/client/service/ClientReadPlatformServiceImpl.java", //
-            "portfolio/group/service/CenterReadPlatformServiceImpl.java", //
+    private static final Set<String> ORDER_BY_VARIABLE_EXCEPTIONS = Set.of("organisation/office/service/OfficeReadPlatformServiceImpl.java",
+            "portfolio/client/service/ClientReadPlatformServiceImpl.java", "portfolio/group/service/CenterReadPlatformServiceImpl.java",
             "infrastructure/dataqueries/service/DatatableUtil.java");
 
     /**

@@ -73,23 +73,33 @@ public final class OutboundAddressValidator {
      *             if any of the addresses is not allowed
      */
     public static List<InetAddress> filterResolved(final String host, final List<InetAddress> addresses) throws UnknownHostException {
-        try {
-            checkAddresses(addresses, host);
-        } catch (IllegalArgumentException e) {
-            throw new UnknownHostException(e.getMessage());
+        final String rejection = rejectionReason(addresses, host);
+        if (rejection != null) {
+            throw new UnknownHostException(rejection);
         }
         return new ArrayList<>(addresses);
     }
 
     private static void checkAddresses(final List<InetAddress> addresses, final String host) {
+        final String rejection = rejectionReason(addresses, host);
+        if (rejection != null) {
+            throw new IllegalArgumentException(rejection);
+        }
+    }
+
+    /**
+     * @return why the addresses cannot be used, or null if all of them can
+     */
+    private static String rejectionReason(final List<InetAddress> addresses, final String host) {
         if (addresses.isEmpty()) {
-            throw new IllegalArgumentException("Host cannot be resolved");
+            return "Host cannot be resolved";
         }
         for (final InetAddress address : addresses) {
             if (isRestricted(address)) {
-                throw new IllegalArgumentException("Host " + host + " resolves to a non-public address");
+                return "Host " + host + " resolves to a non-public address";
             }
         }
+        return null;
     }
 
     public static boolean isRestricted(final InetAddress address) {
