@@ -164,8 +164,7 @@ class S3ContentStoreServiceTest {
     void deleteOfALegacyLocationUsesTheStoredKey() {
         service.delete("documents/clients/1/legacy.txt");
 
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Consumer<DeleteObjectRequest.Builder>> captor = ArgumentCaptor.forClass(Consumer.class);
+        final ArgumentCaptor<Consumer<DeleteObjectRequest.Builder>> captor = ArgumentCaptor.captor();
         verify(s3Client).deleteObject(captor.capture());
         final var builder = DeleteObjectRequest.builder();
         captor.getValue().accept(builder);
@@ -181,8 +180,7 @@ class S3ContentStoreServiceTest {
     }
 
     private String capturedPutKey() {
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Consumer<PutObjectRequest.Builder>> captor = ArgumentCaptor.forClass(Consumer.class);
+        final ArgumentCaptor<Consumer<PutObjectRequest.Builder>> captor = ArgumentCaptor.captor();
         verify(s3Client).putObject(captor.capture(), any(RequestBody.class));
         final var builder = PutObjectRequest.builder();
         captor.getValue().accept(builder);

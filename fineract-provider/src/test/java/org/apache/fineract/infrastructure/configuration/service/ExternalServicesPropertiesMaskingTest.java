@@ -61,8 +61,7 @@ class ExternalServicesPropertiesMaskingTest {
 
         service.retrieveOne("S3");
 
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<RowMapper<ExternalServicesPropertiesData>> captor = ArgumentCaptor.forClass(RowMapper.class);
+        final ArgumentCaptor<RowMapper<ExternalServicesPropertiesData>> captor = ArgumentCaptor.captor();
         verify(jdbcTemplate).query(anyString(), captor.capture());
         final RowMapper<ExternalServicesPropertiesData> mapper = captor.getValue();
 
