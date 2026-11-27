@@ -241,6 +241,7 @@ public class HookWritePlatformServiceImpl implements HookWritePlatformService {
 
             if (conf.getFieldName().equals(payloadURLName)) {
                 try {
+                    processorHelper.assertUrlAllowed(fieldValue);
                     var service = processorHelper.createWebHookService(fieldValue);
                     service.sendEmptyRequest(fieldValue).execute();
                 } catch (IOException | IllegalArgumentException re) {

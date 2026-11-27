@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import jakarta.validation.Valid;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -116,12 +117,18 @@ public class DocumentWritePlatformServiceImpl implements DocumentWritePlatformSe
 
                 if (request.getStream() != null && StringUtils.isNotEmpty(path) && !Strings.CI.equals(doc.getLocation(), path)) {
                     storeService.delete(doc.getLocation());
-                    upload(path, request.getStream(), request.getType());
-                    doc.setLocation(path);
+                    final var storedPath = upload(path, request.getStream(), request.getType());
+                    doc.setLocation(storedPath);
                     doc.setFileName(FilenameUtils.getName(path));
                 }
             } else if (request.getStream() != null) {
-                upload(doc.getLocation(), request.getStream(), request.getType());
+                final var previousLocation = doc.getLocation();
+                final var storedPath = upload(previousLocation, request.getStream(), request.getType());
+                if (storedPath != null && !Path.of(storedPath).normalize().equals(Path.of(previousLocation).normalize())) {
+                    // the store chose a different location (e.g. tenant scoped key for a location created before that)
+                    doc.setLocation(storedPath);
+                    storeService.delete(previousLocation);
+                }
             }
             if (StringUtils.isNotEmpty(request.getDescription()) && !Strings.CI.equals(doc.getDescription(), request.getDescription())) {
                 doc.setDescription(request.getDescription());

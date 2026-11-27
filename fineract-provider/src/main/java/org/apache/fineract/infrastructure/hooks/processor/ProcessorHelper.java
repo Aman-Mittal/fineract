@@ -27,10 +27,13 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import okhttp3.Dns;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
+import org.apache.fineract.infrastructure.core.config.FineractProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -68,7 +71,20 @@ public final class ProcessorHelper {
     private final boolean insecureHttpClient = Boolean.getBoolean("fineract.insecureHttpClient");
     private final SSLContext insecureSSLContext;
 
+    private final boolean allowPrivateAddresses;
+
     public ProcessorHelper() throws KeyManagementException, NoSuchAlgorithmException {
+        this(false);
+    }
+
+    @Autowired
+    public ProcessorHelper(final FineractProperties fineractProperties) throws KeyManagementException, NoSuchAlgorithmException {
+        this(fineractProperties != null && fineractProperties.getHooks() != null
+                && fineractProperties.getHooks().isAllowPrivateAddresses());
+    }
+
+    public ProcessorHelper(final boolean allowPrivateAddresses) throws KeyManagementException, NoSuchAlgorithmException {
+        this.allowPrivateAddresses = allowPrivateAddresses;
         if (insecureHttpClient) {
             insecureSSLContext = createInsecureSSLContext();
         } else {
@@ -78,6 +94,11 @@ public final class ProcessorHelper {
 
     private OkHttpClient createClient() {
         var okBuilder = new OkHttpClient.Builder();
+        if (!allowPrivateAddresses) {
+            // Checked on every connection (including redirects), so a host that later resolves to an internal address
+            // is refused
+            okBuilder.dns(host -> OutboundAddressValidator.filterResolved(host, Dns.SYSTEM.lookup(host)));
+        }
         if (insecureHttpClient) {
             configureInsecureClient(okBuilder);
         }
@@ -111,6 +132,17 @@ public final class ProcessorHelper {
                 LOG.error("URL: {} - Retrofit failure occurred", url, t);
             }
         };
+    }
+
+    /**
+     * Verifies that a hook URL may be called: http or https only and, unless fineract.hooks.allow-private-addresses is
+     * set, a host that resolves only to publicly routable addresses.
+     *
+     * @throws IllegalArgumentException
+     *             if the URL must not be called
+     */
+    public void assertUrlAllowed(final String url) {
+        OutboundAddressValidator.validateUrl(url, allowPrivateAddresses);
     }
 
     /**

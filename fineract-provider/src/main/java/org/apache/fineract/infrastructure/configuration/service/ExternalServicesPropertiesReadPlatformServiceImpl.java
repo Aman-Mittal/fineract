@@ -22,9 +22,9 @@ import com.querydsl.core.Tuple;
 import com.querydsl.sql.SQLQueryFactory;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.campaigns.sms.data.MessageGatewayConfigurationData;
 import org.apache.fineract.infrastructure.configuration.data.ExternalServicesPropertiesData;
@@ -52,22 +52,23 @@ public class ExternalServicesPropertiesReadPlatformServiceImpl implements Extern
     private final QCExternalServiceProperties esp = new QCExternalServiceProperties("esp");
     private final QCExternalService es = new QCExternalService("es");
 
-    private static final class ExternalServiceMapper implements RowMapper<ExternalServicesPropertiesData> {
-
-        List<String> secretAttributes;
-
-        ExternalServiceMapper() {
-            secretAttributes = new ArrayList<>();
-            secretAttributes.add("password");
-            secretAttributes.add("server_key");
+    static boolean isSecretProperty(final String name) {
+        if (name == null) {
+            return false;
         }
+        final String lower = name.toLowerCase(Locale.ROOT);
+        return lower.contains("secret") || lower.contains("password") || lower.contains("token") || lower.endsWith("_key")
+                || lower.equals(ExternalServicesConstants.SMS_TENANT_APP_KEY);
+    }
+
+    private static final class ExternalServiceMapper implements RowMapper<ExternalServicesPropertiesData> {
 
         @Override
         public ExternalServicesPropertiesData mapRow(ResultSet rs, @SuppressWarnings("unused") int rowNum) throws SQLException {
             final String name = rs.getString("name");
             String value = rs.getString("value");
-            // Masking the password as we should not send the password back
-            if (name != null && secretAttributes.contains(name)) {
+            // Secrets (passwords, keys, tokens) must not be sent back
+            if (value != null && isSecretProperty(name)) {
                 value = StringUtil.maskValue(value);
             }
             return new ExternalServicesPropertiesData().setName(name).setValue(value);
