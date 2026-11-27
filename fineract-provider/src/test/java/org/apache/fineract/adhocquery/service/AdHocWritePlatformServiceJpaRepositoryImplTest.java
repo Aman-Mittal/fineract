@@ -21,8 +21,10 @@ package org.apache.fineract.adhocquery.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -169,6 +171,34 @@ class AdHocWritePlatformServiceJpaRepositoryImplTest {
 
         assertTrue(adHoc.isActive());
         assertEquals(Map.of("name", "renamed"), result.getChanges());
+    }
+
+    @Test
+    void updateValidatesTheQueryWhenPresent() {
+        existing();
+
+        service.updateAdHocQuery(ADHOC_ID, command("{\"query\":\"select 2\"}"));
+
+        verify(sqlValidator).validate("adhoc", "select 2");
+    }
+
+    @Test
+    void updateRejectsAnInvalidQueryWithoutSaving() {
+        doThrow(new IllegalArgumentException("invalid")).when(sqlValidator).validate("adhoc", "select 2; drop table t");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.updateAdHocQuery(ADHOC_ID, command("{\"query\":\"select 2; drop table t\"}")));
+
+        verify(adHocRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void updateWithoutAQueryDoesNotValidateSql() {
+        existing();
+
+        service.updateAdHocQuery(ADHOC_ID, command("{\"name\":\"renamed\"}"));
+
+        verify(sqlValidator, never()).validate(any(), any());
     }
 
     private AdHoc existing() {
