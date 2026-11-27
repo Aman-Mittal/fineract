@@ -199,7 +199,7 @@ public class AppUserWritePlatformServiceJpaRepositoryImpl implements AppUserWrit
             final Map<String, Object> changes = applyChanges(userToUpdate, command);
 
             // A user's own update is not subject to maker-checker, so it must not widen the user's own access
-            if (currentUser.getId().equals(userId) && (changes.containsKey("roles") || changes.containsKey("officeId"))
+            if (userId.equals(currentUser.getId()) && (changes.containsKey("roles") || changes.containsKey("officeId"))
                     && !currentUser.hasAnyPermission("ALL_FUNCTIONS")) {
                 throw new NoAuthorizationException("User has no authority to change their own roles or office");
             }
