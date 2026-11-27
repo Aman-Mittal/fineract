@@ -421,12 +421,32 @@ public class TellerWritePlatformServiceJpaImplTest {
             when(tellerRepositoryWrapper.findOneWithNotFoundDetection(anyLong())).thenReturn(teller);
             when(teller.officeId()).thenReturn(1L);
             when(cashierRepository.findById(anyLong())).thenReturn(Optional.of(cashier));
+            when(cashier.getTeller()).thenReturn(teller);
+            when(teller.getId()).thenReturn(1L);
 
             CommandProcessingResult result = underTest.deleteCashierAllocation(1L, 1L, command);
 
             verify(cashierRepository, times(1)).delete(any(Cashier.class));
             assertNotNull(result);
             assertEquals(1L, result.getResourceId());
+        }
+
+        @Test
+        void shouldNotDeleteCashierOfAnotherTeller() {
+            Cashier cashier = mock(Cashier.class);
+            Teller otherTeller = mock(Teller.class);
+
+            when(currentUser.getOffice()).thenReturn(office);
+            when(office.getId()).thenReturn(1L);
+            when(officeRepositoryWrapper.findOfficeHierarchy(anyLong())).thenReturn(office);
+            when(tellerRepositoryWrapper.findOneWithNotFoundDetection(anyLong())).thenReturn(teller);
+            when(teller.officeId()).thenReturn(1L);
+            when(cashierRepository.findById(anyLong())).thenReturn(Optional.of(cashier));
+            when(cashier.getTeller()).thenReturn(otherTeller);
+            when(otherTeller.getId()).thenReturn(2L);
+
+            assertThrows(CashierNotFoundException.class, () -> underTest.deleteCashierAllocation(1L, 5L, command));
+            verify(cashierRepository, never()).delete(any(Cashier.class));
         }
     }
 
@@ -439,7 +459,7 @@ public class TellerWritePlatformServiceJpaImplTest {
             CashierTransaction cashierTxn = mock(CashierTransaction.class);
             setupSharedTransactionMocks(cashier, cashierTxn);
 
-            CommandProcessingResult result = underTest.allocateCashToCashier(1L, command);
+            CommandProcessingResult result = underTest.allocateCashToCashier(1L, 1L, command);
 
             verify(fromApiJsonDeserializer, times(1)).validateForCashTxnForCashier(any());
             verify(cashierTxnRepository, times(1)).save(any(CashierTransaction.class));
@@ -453,7 +473,20 @@ public class TellerWritePlatformServiceJpaImplTest {
         void shouldThrowCashierNotFoundException() {
             when(cashierRepository.findById(anyLong())).thenThrow(new CashierNotFoundException(1L));
 
-            assertThrows(CashierNotFoundException.class, () -> underTest.allocateCashToCashier(1L, command));
+            assertThrows(CashierNotFoundException.class, () -> underTest.allocateCashToCashier(1L, 1L, command));
+        }
+
+        @Test
+        void shouldRejectCashierOfAnotherTeller() {
+            Cashier cashier = mock(Cashier.class);
+            Teller otherTeller = mock(Teller.class);
+            when(cashierRepository.findById(anyLong())).thenReturn(Optional.of(cashier));
+            when(cashier.getTeller()).thenReturn(otherTeller);
+            when(otherTeller.getId()).thenReturn(2L);
+
+            assertThrows(CashierNotFoundException.class, () -> underTest.allocateCashToCashier(1L, 1L, command));
+            verify(cashierTxnRepository, never()).save(any(CashierTransaction.class));
+            verify(glJournalEntryRepository, never()).saveAndFlush(any(JournalEntry.class));
         }
     }
 
@@ -468,7 +501,7 @@ public class TellerWritePlatformServiceJpaImplTest {
             CashierTransaction cashierTxn = mock(CashierTransaction.class);
             setupSharedTransactionMocks(cashier, cashierTxn);
 
-            CommandProcessingResult result = underTest.settleCashFromCashier(1L, command);
+            CommandProcessingResult result = underTest.settleCashFromCashier(1L, 1L, command);
 
             verify(cashierTransactionDataValidator, times(1)).validateSettleCashAndCashOutTransactions(anyLong(), any(JsonCommand.class));
             verify(fromApiJsonDeserializer, times(1)).validateForCashTxnForCashier(any());
@@ -477,6 +510,19 @@ public class TellerWritePlatformServiceJpaImplTest {
             assertNotNull(result);
             assertEquals(1L, result.getCommandId());
             assertEquals(1L, result.getResourceId());
+        }
+
+        @Test
+        void shouldRejectCashierOfAnotherTellerBeforeValidatingBalance() {
+            Cashier cashier = mock(Cashier.class);
+            Teller otherTeller = mock(Teller.class);
+            when(cashierRepository.findById(anyLong())).thenReturn(Optional.of(cashier));
+            when(cashier.getTeller()).thenReturn(otherTeller);
+            when(otherTeller.getId()).thenReturn(2L);
+
+            assertThrows(CashierNotFoundException.class, () -> underTest.settleCashFromCashier(1L, 1L, command));
+            verify(cashierTransactionDataValidator, never()).validateSettleCashAndCashOutTransactions(anyLong(), any(JsonCommand.class));
+            verify(cashierTxnRepository, never()).save(any(CashierTransaction.class));
         }
     }
 
@@ -493,6 +539,7 @@ public class TellerWritePlatformServiceJpaImplTest {
         when(financialActivityAccount.getGlAccount()).thenReturn(glAccount);
         when(cashier.getTeller()).thenReturn(teller);
         when(teller.getOffice()).thenReturn(office);
+        when(teller.getId()).thenReturn(1L);
 
         lenient().when(currentUser.getId()).thenReturn(1L);
         lenient().when(office.getId()).thenReturn(1L);

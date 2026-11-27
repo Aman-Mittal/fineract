@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.apache.fineract.infrastructure.codes.domain.CodeValue;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
@@ -119,6 +120,7 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImpl implements Guaranto
             if (guarantorCommand.getSavingsId() != null) {
                 final SavingsAccount savingsAccount = this.savingsAccountAssembler.assembleFrom(guarantorCommand.getSavingsId(),
                         backdatedTxnsAllowedTill);
+                validateSavingsAccountBelongsToGuarantor(guarantorCommand, savingsAccount);
                 validateGuarantorSavingsAccountActivationDateWithLoanSubmittedOnDate(loan, savingsAccount);
                 accountAssociations = AccountAssociations.associateSavingsAccount(loan, savingsAccount,
                         AccountAssociationType.GUARANTOR_ACCOUNT_ASSOCIATION.getValue(), backdatedTxnsAllowedTill);
@@ -192,6 +194,15 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImpl implements Guaranto
             final Throwable throwable = dve.getMostSpecificCause();
             handleGuarantorDataIntegrityIssues(throwable, dve);
             return CommandProcessingResult.empty();
+        }
+    }
+
+    private void validateSavingsAccountBelongsToGuarantor(final GuarantorCommand guarantorCommand, final SavingsAccount savingsAccount) {
+        if (GuarantorType.CUSTOMER.getValue().equals(guarantorCommand.getGuarantorTypeId())
+                && !Objects.equals(savingsAccount.clientId(), guarantorCommand.getEntityId())) {
+            throw new GeneralPlatformDomainRuleException("error.msg.loan.guarantor.savings.account.not.owned.by.guarantor",
+                    "Savings account with identifier " + savingsAccount.getId() + " does not belong to the guarantor client",
+                    savingsAccount.getId(), guarantorCommand.getEntityId());
         }
     }
 
