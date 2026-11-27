@@ -34,7 +34,6 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -242,7 +241,7 @@ class CodingConventionsTest {
     // ---------------------------------------------------------------- helpers
 
     private static Path repositoryRoot() {
-        Path dir = Paths.get("").toAbsolutePath();
+        Path dir = Path.of("").toAbsolutePath();
         while (dir != null && !Files.exists(dir.resolve("settings.gradle"))) {
             dir = dir.getParent();
         }
