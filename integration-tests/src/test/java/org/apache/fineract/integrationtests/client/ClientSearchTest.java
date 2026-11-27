@@ -436,7 +436,7 @@ public class ClientSearchTest extends FeignIntegrationTest {
     public void testClientSearchOrderByRejectsSubstringBypassAttempt() {
         // given - "officeId" appears as a substring; confirms regex anchors hold
         // when/then
-        assertRejected(SQL_VALIDATOR_REJECTION, "officeId, (CASE WHEN (1=1) THEN 1 END)", null);
+        assertRejected(ALLOW_LIST_REJECTION, "officeId, (CASE WHEN (1=1) THEN 1 END)", null);
     }
 
     @Test
