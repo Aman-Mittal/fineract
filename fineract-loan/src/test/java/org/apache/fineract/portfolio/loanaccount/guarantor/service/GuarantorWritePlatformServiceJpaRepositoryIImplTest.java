@@ -18,6 +18,7 @@
  */
 package org.apache.fineract.portfolio.loanaccount.guarantor.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.exception.GeneralPlatformDomainRuleException;
@@ -60,6 +62,7 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImplTest {
     private static final Long GUARANTOR_CLIENT_ID = 5L;
     private static final Long OTHER_CLIENT_ID = 99L;
     private static final Long GROUP_ID = 12L;
+    private static final Long OTHER_GROUP_ID = 13L;
 
     @Mock
     private LoanRepositoryWrapper loanRepositoryWrapper;
@@ -90,7 +93,7 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImplTest {
         when(loanRepositoryWrapper.findOneWithNotFoundDetection(LOAN_ID, true)).thenReturn(loan);
         savingsAccount = mock(SavingsAccount.class);
         when(savingsAccountAssembler.assembleFrom(anyLong(), anyBoolean())).thenReturn(savingsAccount);
-        when(savingsAccount.clientId()).thenReturn(OTHER_CLIENT_ID);
+        lenient().when(savingsAccount.clientId()).thenReturn(OTHER_CLIENT_ID);
         lenient().when(savingsAccount.groupId()).thenReturn(null);
     }
 
@@ -131,6 +134,45 @@ public class GuarantorWritePlatformServiceJpaRepositoryIImplTest {
 
         assertThrows(GeneralPlatformDomainRuleException.class, () -> underTest.createGuarantor(LOAN_ID, command));
 
+        verify(accountAssociationsRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsSavingsAccountOfAnotherGroupForGroupGuarantor() {
+        givenGuarantorCommand(GuarantorType.GROUP, GROUP_ID);
+        when(savingsAccount.groupId()).thenReturn(OTHER_GROUP_ID);
+
+        assertThrows(GeneralPlatformDomainRuleException.class, () -> underTest.createGuarantor(LOAN_ID, command));
+
+        verify(accountAssociationsRepository, never()).saveAndFlush(any());
+        verify(guarantorRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void doesNotRejectSavingsAccountOfTheGuarantorGroupOnOwnershipCheck() {
+        givenGuarantorCommand(GuarantorType.GROUP, GROUP_ID);
+        when(savingsAccount.groupId()).thenReturn(GROUP_ID);
+        final Loan loan = loanRepositoryWrapper.findOneWithNotFoundDetection(LOAN_ID, true);
+        when(loan.getSubmittedOnDate()).thenReturn(LocalDate.of(2024, 1, 1));
+        when(savingsAccount.getActivationDate()).thenReturn(LocalDate.of(2024, 2, 1));
+
+        // the ownership check passes, so the flow moves on to the activation date check which rejects with a different
+        // code
+        final GeneralPlatformDomainRuleException exception = assertThrows(GeneralPlatformDomainRuleException.class,
+                () -> underTest.createGuarantor(LOAN_ID, command));
+
+        assertEquals("error.msg.guarantor.saving.account.activation.date.is.on.or.before.loan.submitted.on.date",
+                exception.getGlobalisationMessageCode());
+    }
+
+    @Test
+    void rejectsSavingsAccountForStaffGuarantor() {
+        givenGuarantorCommand(GuarantorType.STAFF, 8L);
+
+        final GeneralPlatformDomainRuleException exception = assertThrows(GeneralPlatformDomainRuleException.class,
+                () -> underTest.createGuarantor(LOAN_ID, command));
+
+        assertEquals("error.msg.loan.guarantor.savings.account.not.owned.by.guarantor", exception.getGlobalisationMessageCode());
         verify(accountAssociationsRepository, never()).saveAndFlush(any());
     }
 }

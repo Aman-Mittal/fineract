@@ -66,7 +66,7 @@ Feature: Security Utils SQL validator
       | ["crc32('MySQL')=crc32('MySQL')" ,"MYSQL"]                               | 39    | SQL validation error: invalid SQL statement (detected 'detect-backend' pattern)       |
       | ["pg_client_encoding()=pg_client_encoding()" ,"POSTGRESQL"]              | 39    | SQL validation error: invalid SQL statement (detected 'detect-backend' pattern)       |
       | ["get_current_ts_config()=get_current_ts_config()" ,"POSTGRESQL"]        | 39    | SQL validation error: invalid SQL statement (detected 'detect-backend' pattern)       |
-      | ["quote_literal(42.5)=quote_literal(42.5)" ,"POSTGRESQL"]                | 39    | SQL validation error: invalid SQL statement (detected 'detect-backend' pattern)       |
+      | ["quote_literal(42.5)=quote_literal(42.5)" ,"POSTGRESQL"]                | 39    | SQL validation error: invalid SQL statement (detected 'inject-timing' pattern)        |
       | ["current_database()=current_database()" ,"POSTGRESQL"]                  | 39    | SQL validation error: invalid SQL statement (detected 'detect-backend' pattern)       |
       | 1' ORDER by 1                                                            | 23    | SQL validation error: invalid SQL statement (detected 'detect-column' pattern)        |
       | 1' ORDER BY 1, 2                                                         | 23    | SQL validation error: invalid SQL statement (detected 'detect-column' pattern)        |

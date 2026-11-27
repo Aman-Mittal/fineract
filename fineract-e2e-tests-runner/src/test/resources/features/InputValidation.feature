@@ -69,6 +69,7 @@ Feature: Input validation
     Then Updating the last created ad hoc query with SQL "SELECT id FROM m_client WHERE 1 = 0" succeeds
     Then Updating the last created ad hoc query with SQL "SELECT id FROM m_client; drop table x" is rejected
 
+  @ExternalServicePropertiesRestore
   Scenario: Secret external service properties are returned masked
     When Admin sets the S3 external service properties s3_access_key to "ClearAccessKey123" and s3_secret_key to "ClearSecretKey456"
     Then The S3 external service properties are returned without the values "ClearAccessKey123" and "ClearSecretKey456"

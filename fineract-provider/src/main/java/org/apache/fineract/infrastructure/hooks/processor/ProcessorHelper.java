@@ -18,11 +18,14 @@
  */
 package org.apache.fineract.infrastructure.hooks.processor;
 
+import java.net.InetAddress;
+import java.net.ProxySelector;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -95,9 +98,15 @@ public final class ProcessorHelper {
     private OkHttpClient createClient() {
         var okBuilder = new OkHttpClient.Builder();
         if (!allowPrivateAddresses) {
-            // Checked on every connection (including redirects), so a host that later resolves to an internal address
-            // is refused
-            okBuilder.dns(host -> OutboundAddressValidator.filterResolved(host, Dns.SYSTEM.lookup(host)));
+            // The target host of every request (including redirects) is checked when its route is selected, with or
+            // without a proxy. The resolved addresses are checked again on connect, so a host that later resolves to an
+            // internal address is refused; that check is skipped for proxy hosts, which are configured by the operator.
+            final OutboundProxySelector proxySelector = new OutboundProxySelector(ProxySelector.getDefault());
+            okBuilder.proxySelector(proxySelector);
+            okBuilder.dns(host -> {
+                final List<InetAddress> addresses = Dns.SYSTEM.lookup(host);
+                return proxySelector.isProxyHost(host) ? addresses : OutboundAddressValidator.filterResolved(host, addresses);
+            });
         }
         if (insecureHttpClient) {
             configureInsecureClient(okBuilder);

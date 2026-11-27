@@ -24,7 +24,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.campaigns.sms.data.MessageGatewayConfigurationData;
 import org.apache.fineract.infrastructure.configuration.data.ExternalServicesPropertiesData;
@@ -52,15 +51,6 @@ public class ExternalServicesPropertiesReadPlatformServiceImpl implements Extern
     private final QCExternalServiceProperties esp = new QCExternalServiceProperties("esp");
     private final QCExternalService es = new QCExternalService("es");
 
-    static boolean isSecretProperty(final String name) {
-        if (name == null) {
-            return false;
-        }
-        final String lower = name.toLowerCase(Locale.ROOT);
-        return lower.contains("secret") || lower.contains("password") || lower.contains("token") || lower.endsWith("_key")
-                || lower.equals(ExternalServicesConstants.SMS_TENANT_APP_KEY);
-    }
-
     private static final class ExternalServiceMapper implements RowMapper<ExternalServicesPropertiesData> {
 
         @Override
@@ -68,7 +58,7 @@ public class ExternalServicesPropertiesReadPlatformServiceImpl implements Extern
             final String name = rs.getString("name");
             String value = rs.getString("value");
             // Secrets (passwords, keys, tokens) must not be sent back
-            if (value != null && isSecretProperty(name)) {
+            if (value != null && ExternalServicesSecretProperties.isSecretProperty(name)) {
                 value = StringUtil.maskValue(value);
             }
             return new ExternalServicesPropertiesData().setName(name).setValue(value);

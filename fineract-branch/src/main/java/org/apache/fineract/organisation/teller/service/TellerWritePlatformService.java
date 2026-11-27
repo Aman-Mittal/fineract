@@ -82,7 +82,7 @@ public interface TellerWritePlatformService {
 
     CommandProcessingResult deleteCashierAllocation(Long tellerId, Long cashierId, JsonCommand command);
 
-    CommandProcessingResult allocateCashToCashier(Long tellerId, Long cashierId, JsonCommand command);
+    CommandProcessingResult allocateCashToCashier(Long cashierId, JsonCommand command);
 
-    CommandProcessingResult settleCashFromCashier(Long tellerId, Long cashierId, JsonCommand command);
+    CommandProcessingResult settleCashFromCashier(Long cashierId, JsonCommand command);
 }

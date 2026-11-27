@@ -132,7 +132,11 @@ public class S3ContentStoreService implements ContentStoreService {
     }
 
     private String getTenantPrefix() {
-        final var tenantIdentifier = ThreadLocalContextUtil.getTenant().getTenantIdentifier();
+        final var tenant = ThreadLocalContextUtil.getTenant();
+        if (tenant == null) {
+            throw new ContentStoreException(new IllegalStateException("No tenant is set for the current request"));
+        }
+        final var tenantIdentifier = tenant.getTenantIdentifier();
         if (tenantIdentifier == null || tenantIdentifier.isBlank() || tenantIdentifier.contains("/") || tenantIdentifier.contains("\\")
                 || tenantIdentifier.contains("..")) {
             throw new ContentStoreException(new IllegalStateException("Tenant identifier cannot be used as an object key prefix"));

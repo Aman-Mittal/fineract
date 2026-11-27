@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.apache.fineract.infrastructure.core.data.PaginationParameters;
 import org.apache.fineract.infrastructure.core.service.SearchParameters;
 import org.apache.fineract.infrastructure.security.exception.InputValidationException;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -62,9 +63,9 @@ class SqlIdentifierValidatorTest {
         assertThatThrownBy(() -> SqlIdentifierValidator.validateSortOrder(sortOrder)).isInstanceOf(InputValidationException.class);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = { "(select 1 from m_office)" })
-    void searchAndPaginationParametersOnlyReturnColumnIdentifiers(String orderBy) {
+    @Test
+    void searchAndPaginationParametersOnlyReturnColumnIdentifiers() {
+        final String orderBy = "(select 1 from m_office)";
         SearchParameters search = SearchParameters.builder().orderBy(orderBy).sortOrder("ASC").build();
         PaginationParameters pagination = PaginationParameters.builder().orderBy(orderBy).sortOrder("ASC").build();
 

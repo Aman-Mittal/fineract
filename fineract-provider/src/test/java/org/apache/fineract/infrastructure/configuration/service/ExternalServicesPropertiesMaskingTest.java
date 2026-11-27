@@ -44,13 +44,13 @@ class ExternalServicesPropertiesMaskingTest {
     @ValueSource(strings = { "password", "server_key", "s3_secret_key", "s3_access_key", "tenant_app_key", "PASSWORD", "S3_Secret_Key",
             "client_secret", "api_token", "refresh_Token", "some_new_key" })
     void treatsSecretNamesAsSecret(final String name) {
-        assertTrue(ExternalServicesPropertiesReadPlatformServiceImpl.isSecretProperty(name), name);
+        assertTrue(ExternalServicesSecretProperties.isSecretProperty(name), name);
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "host", "port", "username", "s3_bucket_name", "useTLS", "fromEmail", "endpoint", "keyboard" })
     void doesNotTreatOtherNamesAsSecret(final String name) {
-        assertFalse(ExternalServicesPropertiesReadPlatformServiceImpl.isSecretProperty(name), name);
+        assertFalse(ExternalServicesSecretProperties.isSecretProperty(name), name);
     }
 
     @Test

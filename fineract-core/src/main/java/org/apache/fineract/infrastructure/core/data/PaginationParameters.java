@@ -55,6 +55,20 @@ public class PaginationParameters {
         return SqlIdentifierValidator.validateSortOrder(sortOrder);
     }
 
+    /**
+     * The orderBy as requested, for validators that report unsupported values; SQL must use {@link #getOrderBy()}.
+     */
+    String requestedOrderBy() {
+        return orderBy;
+    }
+
+    /**
+     * The sortOrder as requested, for validators that report unsupported values; SQL must use {@link #getSortOrder()}.
+     */
+    String requestedSortOrder() {
+        return sortOrder;
+    }
+
     public Integer getLimit() {
         if (limit == null) {
             return DEFAULT_MAX_LIMIT;

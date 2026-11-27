@@ -164,7 +164,7 @@ public class TellerApiResource {
 
     private CashierData findCashierOfTeller(final Long tellerId, final Long cashierId) {
         final CashierData cashier = this.readPlatformService.findCashier(cashierId);
-        if (cashier == null || !Objects.equals(cashier.getTellerId(), tellerId)) {
+        if (!Objects.equals(cashier.getTellerId(), tellerId)) {
             throw new CashierNotFoundException(cashierId);
         }
         return cashier;

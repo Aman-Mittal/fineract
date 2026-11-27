@@ -26,6 +26,7 @@ import feign.Headers;
 import feign.Param;
 import feign.RequestLine;
 import feign.Response;
+import io.cucumber.java.After;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import java.math.BigDecimal;
@@ -283,10 +284,22 @@ public class InputValidationStepDef extends AbstractStepDef {
         final List<ExternalServicesPropertiesData> properties = ok(
                 () -> fineractClient.externalServices().retrieveExternalServicesConfiguration("S3"));
         assertThat(properties).extracting(ExternalServicesPropertiesData::getName).contains("s3_access_key", "s3_secret_key");
-        assertThat(properties).filteredOn(p -> "s3_access_key".equals(p.getName())).extracting(ExternalServicesPropertiesData::getValue)
-                .doesNotContain(accessKey);
-        assertThat(properties).filteredOn(p -> "s3_secret_key".equals(p.getName())).extracting(ExternalServicesPropertiesData::getValue)
-                .doesNotContain(secretKey);
+        assertMasked(properties, "s3_access_key", accessKey);
+        assertMasked(properties, "s3_secret_key", secretKey);
+    }
+
+    /**
+     * The seeded S3 key properties have no value, so clearing them restores the initial state.
+     */
+    @After("@ExternalServicePropertiesRestore")
+    public void restoreS3Properties() {
+        final ExternalServiceUpdateApi api = fineractClient.create(ExternalServiceUpdateApi.class);
+        ok(() -> api.updateProperties("S3", Map.of("s3_access_key", "", "s3_secret_key", "")));
+    }
+
+    private static void assertMasked(final List<ExternalServicesPropertiesData> properties, final String name, final String clearValue) {
+        assertThat(properties).filteredOn(p -> name.equals(p.getName())).extracting(ExternalServicesPropertiesData::getValue)
+                .singleElement().asString().isNotEqualTo(clearValue).contains("*");
     }
 
     @Headers({ "Accept: application/json", "Content-Type: application/json" })

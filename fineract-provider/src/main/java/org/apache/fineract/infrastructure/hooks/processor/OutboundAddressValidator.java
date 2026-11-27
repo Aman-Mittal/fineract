@@ -109,17 +109,62 @@ public final class OutboundAddressValidator {
         }
         final byte[] b = address.getAddress();
         if (address instanceof Inet4Address) {
-            final int first = b[0] & 0xff;
-            final int second = b[1] & 0xff;
-            // 0.0.0.0/8, 100.64.0.0/10 (carrier-grade NAT), 255.255.255.255
-            return first == 0 || (first == 100 && (second & 0xc0) == 64)
-                    || (first == 255 && second == 255 && (b[2] & 0xff) == 255 && (b[3] & 0xff) == 255);
+            return isRestrictedIpv4(b);
         }
         if (address instanceof Inet6Address) {
             // fc00::/7 (unique local), fe80::/10 (link-local) and fec0::/10 (deprecated site-local)
             final int first = b[0] & 0xff;
-            return (first & 0xfe) == 0xfc || (first == 0xfe && (b[1] & 0xc0) >= 0x80);
+            if ((first & 0xfe) == 0xfc || (first == 0xfe && (b[1] & 0xc0) >= 0x80)) {
+                return true;
+            }
+            final byte[] embedded = embeddedIpv4(b);
+            return embedded != null && isRestricted(toIpv4(embedded));
         }
         return false;
+    }
+
+    private static boolean isRestrictedIpv4(final byte[] b) {
+        final int first = b[0] & 0xff;
+        final int second = b[1] & 0xff;
+        final int third = b[2] & 0xff;
+        // 0.0.0.0/8, 100.64.0.0/10 (carrier-grade NAT), 192.0.0.0/24 (protocol assignments),
+        // 198.18.0.0/15 (benchmarking), 240.0.0.0/4 (reserved, includes 255.255.255.255)
+        return first == 0 || (first == 100 && (second & 0xc0) == 64) || (first == 192 && second == 0 && third == 0)
+                || (first == 198 && (second & 0xfe) == 18) || first >= 240;
+    }
+
+    /**
+     * @return the IPv4 address embedded in a NAT64 (64:ff9b::/96), 6to4 (2002::/16) or IPv4-compatible (::a.b.c.d)
+     *         address, or null if the address does not embed one
+     */
+    private static byte[] embeddedIpv4(final byte[] b) {
+        if (b[0] == 0x00 && b[1] == 0x64 && (b[2] & 0xff) == 0xff && (b[3] & 0xff) == 0x9b && allZero(b, 4, 12)) {
+            return Arrays.copyOfRange(b, 12, 16);
+        }
+        if (b[0] == 0x20 && b[1] == 0x02) {
+            return Arrays.copyOfRange(b, 2, 6);
+        }
+        if (allZero(b, 0, 12)) {
+            return Arrays.copyOfRange(b, 12, 16);
+        }
+        return null;
+    }
+
+    private static InetAddress toIpv4(final byte[] address) {
+        try {
+            return InetAddress.getByAddress(address);
+        } catch (UnknownHostException e) {
+            // only thrown for an address of illegal length, which four bytes are not
+            throw new IllegalStateException("Invalid IPv4 address length", e);
+        }
+    }
+
+    private static boolean allZero(final byte[] b, final int from, final int to) {
+        for (int i = from; i < to; i++) {
+            if (b[i] != 0) {
+                return false;
+            }
+        }
+        return true;
     }
 }

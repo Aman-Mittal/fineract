@@ -31,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.util.function.Consumer;
 import org.apache.fineract.infrastructure.contentstore.detector.ContentDetectorManager;
 import org.apache.fineract.infrastructure.contentstore.exception.ContentPolicyException;
+import org.apache.fineract.infrastructure.contentstore.exception.ContentStoreException;
 import org.apache.fineract.infrastructure.contentstore.policy.DefaultDeleteContentPolicy;
 import org.apache.fineract.infrastructure.contentstore.policy.DefaultDownloadContentPolicy;
 import org.apache.fineract.infrastructure.contentstore.policy.DefaultPostUploadContentPolicy;
@@ -175,8 +176,24 @@ class S3ContentStoreServiceTest {
     void uploadRejectsATenantIdentifierThatCannotBeUsedAsKeyPrefix() {
         setTenant("a/../b");
 
-        assertThrows(RuntimeException.class,
+        assertThrows(ContentStoreException.class,
                 () -> service.upload("documents/clients/1/file.txt", new ByteArrayInputStream(new byte[] { 1 }), "text/plain"));
+    }
+
+    @Test
+    void uploadWithoutATenantIsRejectedWithAStoreException() {
+        ThreadLocalContextUtil.clearTenant();
+
+        assertThrows(ContentStoreException.class,
+                () -> service.upload("documents/clients/1/file.txt", new ByteArrayInputStream(new byte[] { 1 }), "text/plain"));
+        verify(s3Client, never()).putObject(any(Consumer.class), any(RequestBody.class));
+    }
+
+    @Test
+    void downloadOfAPrefixedLocationWithoutATenantIsRejectedWithAStoreException() {
+        ThreadLocalContextUtil.clearTenant();
+
+        assertThrows(ContentStoreException.class, () -> service.download("tenants/tenant-a/documents/clients/1/file.txt"));
     }
 
     private String capturedPutKey() {

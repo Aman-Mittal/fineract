@@ -42,7 +42,6 @@ import org.apache.fineract.useradministration.domain.RoleRepository;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -102,13 +101,10 @@ public class OidcAppUserResolutionServiceImpl implements OidcAppUserResolutionSe
         return createUser(username, email, firstName, lastName, tokenRoles, oidcConfig);
     }
 
-    /** A user that is disabled, locked or deleted cannot sign in with an OIDC identity either. */
+    /** A user that is disabled or deleted cannot sign in with an OIDC identity either. */
     private static void checkUsable(AppUser user) {
-        if (user.isDeleted() || !user.isEnabled()) {
+        if (user.isNotEnabled() || user.isDeleted()) {
             throw new DisabledException("User account is disabled");
-        }
-        if (!user.isAccountNonLocked()) {
-            throw new LockedException("User account is locked");
         }
     }
 

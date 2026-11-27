@@ -22,6 +22,7 @@ import jakarta.persistence.PersistenceException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -214,7 +215,7 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
 
     /** A permission can only be granted to a role by a user who holds it. */
     private static void validateMayGrant(final AppUser currentUser, final String permissionCode) {
-        final boolean allowed = permissionCode.toUpperCase(java.util.Locale.ROOT).startsWith(READ_PREFIX)
+        final boolean allowed = permissionCode.toUpperCase(Locale.ROOT).startsWith(READ_PREFIX)
                 ? currentUser.hasAnyPermission(permissionCode, ALL_FUNCTIONS_READ)
                 : currentUser.hasAnyPermission(permissionCode);
         if (!allowed) {
