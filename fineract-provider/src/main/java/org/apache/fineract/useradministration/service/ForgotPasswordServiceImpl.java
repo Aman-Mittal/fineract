@@ -66,7 +66,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         final String organisationName = user.getOffice().getName();
         final String contactName = user.getFirstname() + " " + user.getLastname();
 
-        this.emailService.sendForgotPasswordEmail(organisationName, contactName, email, user.getUsername(), temporaryPassword);
+        this.emailService.sendForgotPasswordEmail(organisationName, contactName, user.getEmail(), user.getUsername(), temporaryPassword);
 
         log.info("Password reset email sent to user: {}", user.getUsername());
     }

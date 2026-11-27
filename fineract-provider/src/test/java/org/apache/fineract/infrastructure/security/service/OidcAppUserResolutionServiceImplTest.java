@@ -52,6 +52,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -96,6 +98,47 @@ class OidcAppUserResolutionServiceImplTest {
         // Required by AppUser constructor via DateUtils.getLocalDateOfTenant()
         when(platformTenant.getTimezoneId()).thenReturn("UTC");
         ThreadLocalContextUtil.setTenant(platformTenant);
+        when(existingUser.isEnabled()).thenReturn(true);
+        when(existingUser.isAccountNonLocked()).thenReturn(true);
+        when(existingUser.isDeleted()).thenReturn(false);
+    }
+
+    @Test
+    void rejectsDisabledUserFoundByUsername() {
+        when(appUserRepository.findAppUserByName("alice")).thenReturn(existingUser);
+        when(existingUser.isEnabled()).thenReturn(false);
+
+        assertThatThrownBy(() -> service.resolveOrCreate("alice", "alice@example.com", null, null, OidcTokenRoles.undecided()))
+                .isInstanceOf(DisabledException.class);
+        verify(appUserRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rejectsDeletedUserFoundByUsername() {
+        when(appUserRepository.findAppUserByName("alice")).thenReturn(existingUser);
+        when(existingUser.isDeleted()).thenReturn(true);
+
+        assertThatThrownBy(() -> service.resolveOrCreate("alice", "alice@example.com", null, null, OidcTokenRoles.undecided()))
+                .isInstanceOf(DisabledException.class);
+    }
+
+    @Test
+    void rejectsLockedUserFoundByUsername() {
+        when(appUserRepository.findAppUserByName("alice")).thenReturn(existingUser);
+        when(existingUser.isAccountNonLocked()).thenReturn(false);
+
+        assertThatThrownBy(() -> service.resolveOrCreate("alice", "alice@example.com", null, null, OidcTokenRoles.undecided()))
+                .isInstanceOf(LockedException.class);
+    }
+
+    @Test
+    void rejectsLockedUserFoundByEmail() {
+        when(appUserRepository.findAppUserByName("alice")).thenReturn(null);
+        when(appUserRepository.findActiveUserByEmail("alice@example.com")).thenReturn(existingUser);
+        when(existingUser.isAccountNonLocked()).thenReturn(false);
+
+        assertThatThrownBy(() -> service.resolveOrCreate("alice", "alice@example.com", null, null, OidcTokenRoles.undecided()))
+                .isInstanceOf(LockedException.class);
     }
 
     @AfterEach

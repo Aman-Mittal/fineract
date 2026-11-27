@@ -100,6 +100,7 @@ class ForgotPasswordServiceImplTest {
         when(user.getFirstname()).thenReturn("Demo");
         when(user.getLastname()).thenReturn("User");
         when(user.getUsername()).thenReturn("demo");
+        when(user.getEmail()).thenReturn("stored@example.com");
 
         OffsetDateTime minExpected = OffsetDateTime.now(ZoneOffset.UTC).plusHours(1).minusSeconds(5);
         subject.requestPasswordReset(EMAIL);
@@ -107,7 +108,7 @@ class ForgotPasswordServiceImplTest {
 
         verify(user).updateTemporaryPassword(eq("{bcrypt}encoded-temporary-password"), expiryCaptor.capture());
         verify(appUserRepository).saveAndFlush(user);
-        verify(emailService).sendForgotPasswordEmail(eq("Head Office"), eq("Demo User"), eq(EMAIL), eq("demo"), anyString());
+        verify(emailService).sendForgotPasswordEmail(eq("Head Office"), eq("Demo User"), eq("stored@example.com"), eq("demo"), anyString());
 
         OffsetDateTime actualExpiry = expiryCaptor.getValue();
         assertFalse(actualExpiry.isBefore(minExpected));

@@ -20,6 +20,8 @@ package org.apache.fineract.useradministration.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.Optional;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.useradministration.command.PermissionsCommand;
+import org.apache.fineract.useradministration.domain.AppUser;
 import org.apache.fineract.useradministration.domain.Permission;
 import org.apache.fineract.useradministration.domain.PermissionRepository;
 import org.apache.fineract.useradministration.domain.Role;
@@ -69,6 +72,7 @@ class RoleWritePlatformServiceJpaRepositoryImplTest {
         role = new Role("test-role", "test role");
         subject = new RoleWritePlatformServiceJpaRepositoryImpl(context, roleRepository, permissionRepository, roleDataValidator,
                 permissionsDeserializer);
+        lenient().when(context.authenticatedUser()).thenReturn(mock(AppUser.class));
         when(command.json()).thenReturn(JSON);
         when(roleRepository.findById(ROLE_ID)).thenReturn(Optional.of(role));
         when(permissionRepository.findAll()).thenReturn(List.of(datatableCreateGroup, coreCreateGroup));

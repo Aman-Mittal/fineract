@@ -41,6 +41,8 @@ import org.apache.fineract.useradministration.domain.Role;
 import org.apache.fineract.useradministration.domain.RoleRepository;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -75,6 +77,7 @@ public class OidcAppUserResolutionServiceImpl implements OidcAppUserResolutionSe
         AppUser user = appUserRepository.findAppUserByName(username);
         if (user != null) {
             log.debug("OIDC user resolved by username: '{}'", username);
+            checkUsable(user);
             return synchronizeRoles(user, tokenRoles, oidcConfig);
         }
 
@@ -84,6 +87,7 @@ public class OidcAppUserResolutionServiceImpl implements OidcAppUserResolutionSe
             if (user != null) {
                 // The token names another user, so it does not decide the roles of this one.
                 log.debug("OIDC user resolved by email: '{}'", email);
+                checkUsable(user);
                 return user;
             }
         }
@@ -96,6 +100,16 @@ public class OidcAppUserResolutionServiceImpl implements OidcAppUserResolutionSe
 
         log.info("Auto-creating Fineract user for OIDC subject '{}'", username);
         return createUser(username, email, firstName, lastName, tokenRoles, oidcConfig);
+    }
+
+    /** A user that is disabled, locked or deleted cannot sign in with an OIDC identity either. */
+    private static void checkUsable(AppUser user) {
+        if (user.isDeleted() || !user.isEnabled()) {
+            throw new DisabledException("User account is disabled");
+        }
+        if (!user.isAccountNonLocked()) {
+            throw new LockedException("User account is locked");
+        }
     }
 
     /**
